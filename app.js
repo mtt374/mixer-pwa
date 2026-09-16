@@ -91,7 +91,6 @@ function tabIcon(name, size) {
 }
 
 const SETTINGS = { showCumulative: true, showPercent: true, roundTo: 1, defaultUnit: 'kg' };
-const STORAGE_KEY = 'miscele-pwa:recipes:v1';
 
 function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; }
 function fmt(n, d) {
@@ -110,14 +109,51 @@ function defaultRecipes() {
   }));
 }
 
-function readStoredRecipes() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr) || !arr.length) return null;
-    return arr;
-  } catch (e) { return null; }
+/* ---------- shared database (Firestore) ---------- */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAb12-xeWyao82XTYH4OYoZq06esHn9ON8",
+  authDomain: "mixer-pwa.firebaseapp.com",
+  projectId: "mixer-pwa",
+  storageBucket: "mixer-pwa.firebasestorage.app",
+  messagingSenderId: "499287193250",
+  appId: "1:499287193250:web:fc041cb0af4c59b8d009fb"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+const recipesCol = db.collection('recipes');
+
+function recipeData(r) {
+  return { name: r.name || '', sp: r.sp || '', species: r.species || '', base: r.base, fixed: r.fixed };
+}
+function saveRecipeToDb(r) {
+  recipesCol.doc(r.id).set(recipeData(r)).catch(() => showToast('Sincronizzazione non riuscita'));
+}
+function deleteRecipeFromDb(id) {
+  recipesCol.doc(id).delete().catch(() => showToast('Sincronizzazione non riuscita'));
+}
+function replaceAllRecipesInDb(newRecipes) {
+  recipesCol.get().then(snap => {
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.delete(d.ref));
+    newRecipes.forEach(r => batch.set(recipesCol.doc(r.id), recipeData(r)));
+    return batch.commit();
+  }).catch(() => showToast('Sincronizzazione non riuscita'));
+}
+function startRecipesSync() {
+  recipesCol.get().then(snap => {
+    if (snap.empty) {
+      const batch = db.batch();
+      defaultRecipes().forEach(r => batch.set(recipesCol.doc(r.id), recipeData(r)));
+      return batch.commit();
+    }
+  }).catch(() => {}).finally(() => {
+    recipesCol.onSnapshot(snap => {
+      const recipes = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      setState({ recipes, loading: false });
+    }, () => showToast('Errore di connessione al database'));
+  });
 }
 
 /* ---------- theme ---------- */
@@ -138,7 +174,8 @@ function applyTheme(theme) {
 let state = {
   tab: 'razioni', // 'razioni' | 'produzione'
   filter: 'Tutte',
-  recipes: readStoredRecipes() || defaultRecipes(),
+  recipes: [],
+  loading: true,
   theme: readTheme(),
 
   razioniId: null,      // set => showing the read-only view (or editor) for this recipe
@@ -158,7 +195,6 @@ let deleteConfirmTimer = null;
 function setState(patch) {
   const p = typeof patch === 'function' ? patch(state) : patch;
   state = Object.assign({}, state, p);
-  if (p.recipes) persistLocal(state.recipes);
   render();
 }
 
@@ -170,13 +206,10 @@ function curProd() {
 }
 function updateRazioni(fn) {
   setState(s => ({ recipes: s.recipes.map(x => x.id !== s.razioniId ? x : fn(x)) }));
+  saveRecipeToDb(curRazioni());
 }
 
-/* ---------- persistence ---------- */
-
-function persistLocal(recipes) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch (e) {}
-}
+/* ---------- import/export (backup files) ---------- */
 
 function isValidRecipeShape(r) {
   return !!r && typeof r === 'object' && typeof r.id === 'string' &&
@@ -217,6 +250,7 @@ function importData() {
         const arr = Array.isArray(data) ? data : (data && Array.isArray(data.recipes) ? data.recipes : null);
         if (!arr || !arr.length || !arr.every(isValidRecipeShape)) throw new Error('bad shape');
         setState({ recipes: arr, razioniId: null, razioniMode: 'view', prodId: null, filter: 'Tutte' });
+        replaceAllRecipesInDb(arr);
         showToast('File importato ✓');
       } catch (e) {
         showToast('File non valido o danneggiato');
@@ -319,6 +353,10 @@ function computeSession(r) {
 const app = document.getElementById('app');
 
 function render() {
+  if (state.loading) {
+    app.innerHTML = `<div class="app-frame"><div class="screen-area"><div class="loading-screen">Caricamento…</div></div></div>`;
+    return;
+  }
   let screenHtml;
   if (state.tab === 'razioni') {
     screenHtml = state.razioniId
@@ -607,6 +645,7 @@ app.addEventListener('click', (e) => {
         fixed: [{ name: '', qty: '' }],
       };
       setState(s => ({ recipes: s.recipes.concat([blank]), razioniId: nid, razioniMode: 'edit', filter: 'Tutte' }));
+      saveRecipeToDb(blank);
       break;
     }
     case 'open-razioni': setState({ razioniId: id, razioniMode: 'view', confirmingDelete: false }); break;
@@ -638,13 +677,14 @@ app.addEventListener('click', (e) => {
       break;
     }
     case 'remove-base': {
+      const r0 = state.recipes.find(x => x.id === state.razioniId);
+      if (!r0 || r0.base.length <= 1) break;
       setState(s => {
-        const r0 = s.recipes.find(x => x.id === s.razioniId);
-        if (!r0 || r0.base.length <= 1) return {};
         const newBase = r0.base.filter((_, i) => i !== idx);
         const recipes = s.recipes.map(x => x.id !== r0.id ? x : Object.assign({}, x, { base: newBase }));
         return { recipes, limitIdx: Math.max(0, Math.min(s.limitIdx, newBase.length - 1)) };
       });
+      saveRecipeToDb(curRazioni());
       break;
     }
     case 'add-fixed': {
@@ -671,6 +711,7 @@ app.addEventListener('click', (e) => {
           prodId: s.prodId === r.id ? null : s.prodId,
         };
       });
+      deleteRecipeFromDb(r.id);
       showToast('Ricetta eliminata');
       break;
     }
@@ -712,6 +753,7 @@ app.addEventListener('input', (e) => {
 
 applyTheme(state.theme);
 render();
+startRecipesSync();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

@@ -202,6 +202,11 @@ button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
 
 .empty-state { padding: 40px 12px; text-align: center; color: var(--muted); font-size: 14px; }
 
+.loading-screen {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px; letter-spacing: .04em;
+}
+
 /* ---- Detail header (Razioni edit / Produzione session) ---- */
 .op-header { padding: 22px 18px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; flex: none; }
 .back-btn {
