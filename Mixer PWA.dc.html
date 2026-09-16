@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #0E100E; font-family: 'Bricolage Grotesque', Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #4FB183; text-decoration: none; }
+  a:hover { color: #7FD0AA; }
+  input { font-family: inherit; }
+  input::placeholder { color: #6E766E; }
+</style>
+</helmet>
+
+<div style="height: 100dvh; background: #0E100E; color: #E8EBE8; display: flex; justify-content: center; overflow: hidden; text-wrap: pretty;">
+  <div style="width: 100%; max-width: 880px; display: flex; flex-direction: column; overflow: hidden;">
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+        <div style="padding: 20px 18px 14px; display: flex; align-items: flex-end; gap: 12px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-family: 'DM Mono', monospace; font-size: 11px; color: #7E867E; letter-spacing: 0.12em; text-transform: uppercase;">Archivio</div>
+            <div style="font-size: 30px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; margin-top: 2px;">Miscele</div>
+          </div>
+          <button onClick="{{ onNew }}" style="border: 1px solid #2C312C; background: #171A17; color: #E8EBE8; font-family: 'Bricolage Grotesque', sans-serif; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 999px; cursor: pointer;" style-hover="border-color: #3E9A6B; color: #7FD0AA;">+ Nuova ricetta</button>
+        </div>
+
+        <div style="padding: 0 18px 12px; display: flex; gap: 7px; flex-wrap: wrap;">
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="5">
+            <button onClick="{{ f.pick }}" style="border: 1px solid {{ f.border }}; background: {{ f.bg }}; color: {{ f.color }}; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.04em; padding: 7px 12px; border-radius: 999px; cursor: pointer;">{{ f.label }}</button>
+          </sc-for>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto; padding: 4px 18px 24px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+            <sc-for list="{{ cards }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.open }}" style="text-align: left; background: #151815; border: 1px solid #232823; border-radius: 16px; padding: 15px; cursor: pointer; color: #E8EBE8; font-family: 'Bricolage Grotesque', sans-serif; display: flex; flex-direction: column; gap: 12px; min-height: 172px;" style-hover="border-color: #3E9A6B; background: #191E1A;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; border: 1px solid #2F4A3C; background: #16201A; color: #7FD0AA; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.02em;">{{ c.code }}</span>
+                  <span style="font-family: 'DM Mono', monospace; font-size: 10px; color: #7E867E;">{{ c.count }}</span>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #7E867E; letter-spacing: 0.1em; text-transform: uppercase;">{{ c.species }}</div>
+                  <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; margin-top: 5px;">{{ c.name }}</div>
+                </div>
+                <div style="display: flex; gap: 2px; height: 4px; border-radius: 999px; overflow: hidden;">
+                  <sc-for list="{{ c.bars }}" as="b" hint-placeholder-count="5">
+                    <span style="display: block; height: 4px; background: #3E9A6B; width: {{ b.w }};"></span>
+                  </sc-for>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isOp }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+
+        <div style="padding: 14px 18px 12px; border-bottom: 1px solid #232823; display: flex; align-items: center; gap: 12px;">
+          <button onClick="{{ goHome }}" style="border: 1px solid #2C312C; background: transparent; color: #C9CFC9; width: 34px; height: 34px; border-radius: 999px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 15px; flex: none;" style-hover="border-color: #3E9A6B; color: #7FD0AA;">‹</button>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #7E867E; letter-spacing: 0.1em; text-transform: uppercase;">{{ species }}</div>
+            <div style="font-size: 18px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ recipeName }}</div>
+          </div>
+          <div style="display: flex; gap: 4px; background: #151815; border: 1px solid #232823; border-radius: 999px; padding: 3px; flex: none;">
+            <button onClick="{{ showCalc }}" style="border: none; border-radius: 999px; background: {{ tabCalcBg }}; color: {{ tabCalcColor }}; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 12px; padding: 7px 12px; cursor: pointer;">Pesate</button>
+            <button onClick="{{ showComp }}" style="border: none; border-radius: 999px; background: {{ tabCompBg }}; color: {{ tabCompColor }}; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 12px; padding: 7px 12px; cursor: pointer;">Composizione</button>
+          </div>
+        </div>
+
+        <div style="padding: 12px 18px; border-bottom: 1px solid #232823; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 4px; background: #151815; border: 1px solid #232823; border-radius: 10px; padding: 3px; flex: none;">
+            <button onClick="{{ setModeTotal }}" style="border: none; border-radius: 8px; background: {{ mTotalBg }}; color: {{ mTotalColor }}; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 12px; padding: 8px 11px; cursor: pointer;">Totale</button>
+            <button onClick="{{ setModeLimit }}" style="border: none; border-radius: 8px; background: {{ mLimitBg }}; color: {{ mLimitColor }}; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 12px; padding: 8px 11px; cursor: pointer;">Vincolo</button>
+          </div>
+          <div style="flex: 1; min-width: 190px; display: flex; align-items: baseline; gap: 10px;">
+            <input value="{{ amount }}" onChange="{{ onAmount }}" inputMode="decimal" style="flex: 1; min-width: 0; background: transparent; border: none; border-bottom: 2px solid #2C312C; padding: 0 0 4px; color: #E8EBE8; font-family: 'DM Mono', monospace; font-weight: 500; font-size: 40px; letter-spacing: -0.04em; outline: none;" style-focus="border-bottom-color: #3E9A6B;" />
+            <div style="display: flex; gap: 3px; flex: none;">
+              <button onClick="{{ setKg }}" style="border: 1px solid {{ kgBorder }}; border-radius: 8px; background: {{ kgBg }}; color: {{ kgColor }}; font-family: 'DM Mono', monospace; font-size: 12px; padding: 6px 9px; cursor: pointer;">kg</button>
+              <button onClick="{{ setQ }}" style="border: 1px solid {{ qBorder }}; border-radius: 8px; background: {{ qBg }}; color: {{ qColor }}; font-family: 'DM Mono', monospace; font-size: 12px; padding: 6px 9px; cursor: pointer;">q</button>
+            </div>
+          </div>
+        </div>
+
+        <sc-if value="{{ isLimitMode }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 10px 18px; border-bottom: 1px solid #232823; display: flex; gap: 6px; overflow-x: auto;">
+            <sc-for list="{{ limitChoices }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.pick }}" style="border: 1px solid {{ c.border }}; background: {{ c.bg }}; color: {{ c.color }}; font-family: 'DM Mono', monospace; font-size: 11px; padding: 6px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; flex: none;">{{ c.name }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ panelCalc }}" hint-placeholder-val="{{ true }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto;">
+            <div style="display: flex; gap: 10px; padding: 9px 18px; position: sticky; top: 0; background: #0E100E; border-bottom: 1px solid #232823; font-family: 'DM Mono', monospace; font-size: 10px; color: #7E867E; letter-spacing: 0.1em; text-transform: uppercase;">
+              <span style="flex: 1; min-width: 0;">Ingrediente</span>
+              <sc-if value="{{ showPct }}" hint-placeholder-val="{{ true }}"><span style="width: 44px; text-align: right;">%</span></sc-if>
+              <span style="width: 86px; text-align: right;">{{ unitLabel }}</span>
+              <sc-if value="{{ showCum }}" hint-placeholder-val="{{ true }}"><span style="width: 78px; text-align: right;">progr.</span></sc-if>
+            </div>
+            <sc-for list="{{ calcRows }}" as="r" hint-placeholder-count="9">
+              <div style="display: flex; gap: 10px; align-items: baseline; padding: 10px 18px; border-bottom: 1px solid #1B1F1B; background: {{ r.bg }};">
+                <span style="flex: 1; min-width: 0; font-size: 14px; color: {{ r.nameColor }};">{{ r.name }}</span>
+                <sc-if value="{{ showPct }}" hint-placeholder-val="{{ true }}"><span style="width: 44px; text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; color: #7E867E;">{{ r.pct }}</span></sc-if>
+                <span style="width: 86px; text-align: right; font-family: 'DM Mono', monospace; font-weight: 500; font-size: 18px; letter-spacing: -0.03em;">{{ r.qty }}</span>
+                <sc-if value="{{ showCum }}" hint-placeholder-val="{{ true }}"><span style="width: 78px; text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; color: #7E867E;">{{ r.cum }}</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ panelComp }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: 1; min-height: 0; overflow-y: auto;">
+            <div style="padding: 12px 18px; border-bottom: 1px solid #232823; display: flex; flex-direction: column; gap: 10px;">
+              <input value="{{ nameField }}" onChange="{{ onName }}" placeholder="Nome della ricetta" style="width: 100%; box-sizing: border-box; background: #151815; border: 1px solid #2C312C; border-radius: 10px; padding: 11px 12px; color: #E8EBE8; font-family: 'Bricolage Grotesque', sans-serif; font-size: 16px; font-weight: 600; outline: none;" style-focus="border-color: #3E9A6B;" />
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <sc-for list="{{ speciesChoices }}" as="s" hint-placeholder-count="5">
+                  <button onClick="{{ s.pick }}" style="border: 1px solid {{ s.border }}; background: {{ s.bg }}; color: {{ s.color }}; font-family: 'DM Mono', monospace; font-size: 11px; padding: 6px 10px; border-radius: 999px; cursor: pointer;">{{ s.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; border-bottom: 1px solid #232823; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #7E867E;">
+              <span>Base · percentuali</span>
+              <span style="color: {{ sumColor }};">Σ {{ sumPct }} %</span>
+            </div>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 18px; border-bottom: 1px solid #1B1F1B;">
+                <span style="flex: 1; min-width: 0; font-size: 14px;">{{ r.name }}</span>
+                <input value="{{ r.pct }}" onChange="{{ r.onPct }}" inputMode="decimal" style="width: 68px; text-align: right; background: #151815; border: 1px solid #2C312C; border-radius: 8px; padding: 8px 9px; color: #E8EBE8; font-family: 'DM Mono', monospace; font-size: 14px; outline: none;" style-focus="border-color: #3E9A6B;" />
+                <span style="font-family: 'DM Mono', monospace; font-size: 12px; color: #7E867E; width: 12px;">%</span>
+              </div>
+            </sc-for>
+            <div style="padding: 10px 18px; border-bottom: 1px solid #232823; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #7E867E;">Aggiunte fisse · kg per tonnellata</div>
+            <sc-for list="{{ fixedRows }}" as="f" hint-placeholder-count="2">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 18px; border-bottom: 1px solid #1B1F1B;">
+                <span style="flex: 1; min-width: 0; font-size: 14px;">{{ f.name }}</span>
+                <input value="{{ f.qty }}" onChange="{{ f.onQty }}" inputMode="decimal" style="width: 68px; text-align: right; background: #151815; border: 1px solid #2C312C; border-radius: 8px; padding: 8px 9px; color: #E8EBE8; font-family: 'DM Mono', monospace; font-size: 14px; outline: none;" style-focus="border-color: #3E9A6B;" />
+                <span style="font-family: 'DM Mono', monospace; font-size: 12px; color: #7E867E; width: 30px;">kg/t</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div style="border-top: 1px solid #2C312C; background: #141915; padding: 11px 18px; display: flex; align-items: baseline; gap: 12px; flex: none;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-family: 'DM Mono', monospace; font-size: 10px; color: #7E867E; letter-spacing: 0.1em; text-transform: uppercase;">Totale caricato</div>
+            <div style="font-size: 12px; color: #7E867E; margin-top: 3px;">{{ batchNote }}</div>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 6px; flex: none;">
+            <span style="font-family: 'DM Mono', monospace; font-weight: 500; font-size: 30px; color: #7FD0AA; letter-spacing: -0.04em;">{{ grandTotal }}</span>
+            <span style="font-family: 'DM Mono', monospace; font-size: 12px; color: #7E867E;">{{ unitLabel }}</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showCumulative&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Pesate&quot;},&quot;showPercent&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Pesate&quot;},&quot;roundTo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;1&quot;,&quot;5&quot;,&quot;10&quot;,&quot;25&quot;],&quot;default&quot;:&quot;1&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Pesate&quot;,&quot;unit&quot;:&quot;kg&quot;},&quot;defaultUnit&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;kg&quot;,&quot;q&quot;],&quot;default&quot;:&quot;kg&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Pesate&quot;}}">
+const RECIPES = [
+  { id: 'r1', name: 'Lattifere in produzione', sp: 'cow', species: 'Bovine da latte',
+    base: [['Mais macinato',42],['Orzo',18],['Farina di soia 44',15],['Crusca di frumento',10],['Polpe di bietola',8],['Carbonato di calcio',4],['Sale',1.5],['Bicarbonato di sodio',1.5]],
+    fixed: [['Nucleo vitaminico-minerale',5],['Lievito vivo',1.5]] },
+  { id: 'r2', name: 'Finissaggio vitelloni', sp: 'beef', species: 'Bovini da carne',
+    base: [['Mais farina',48],['Orzo',20],['Farina di girasole',12],['Crusca di frumento',9],['Melasso',5],['Carbonato di calcio',4],['Sale',2]],
+    fixed: [['Nucleo minerale bovini',6]] },
+  { id: 'r3', name: 'Ingrasso fase 2', sp: 'pig', species: 'Suini',
+    base: [['Mais macinato',55],['Farina di soia 44',17],['Orzo',14],['Crusca di frumento',8],['Olio di soia',2],['Carbonato di calcio',2],['Fosfato bicalcico',1.4],['Sale',0.6]],
+    fixed: [['Nucleo suini',4],['Lisina',2.5]] },
+  { id: 'r4', name: 'Deposizione ovaiole', sp: 'hen', species: 'Avicoli',
+    base: [['Mais macinato',52],['Farina di soia 44',22],['Carbonato di calcio grosso',9],['Crusca di frumento',7],['Orzo',6],['Olio vegetale',2],['Fosfato bicalcico',1.4],['Sale',0.6]],
+    fixed: [['Nucleo ovaiole',3.5]] },
+  { id: 'r5', name: 'Asciutta pecore', sp: 'sheep', species: 'Ovini',
+    base: [['Orzo',40],['Mais macinato',25],['Crusca di frumento',18],['Favino',10],['Carbonato di calcio',4],['Sale',3]],
+    fixed: [['Nucleo ovini',4]] },
+  { id: 'r6', name: 'Svezzamento suinetti', sp: 'pig', species: 'Suini',
+    base: [['Mais fioccato',38],['Orzo fioccato',20],['Farina di soia 44',14],['Siero di latte in polvere',12],['Farina di pesce',6],['Olio di soia',3],['Carbonato di calcio',2.5],['Fosfato bicalcico',2],['Sale',0.5]],
+    fixed: [['Nucleo svezzamento',5],['Acidificante',3]] },
+];
+
+const A = '#3E9A6B', ABRIGHT = '#7FD0AA';
+
+const SPECIES = [
+  { key: 'cow', label: 'Bovine da latte', code: 'BL' },
+  { key: 'beef', label: 'Bovini da carne', code: 'BC' },
+  { key: 'pig', label: 'Suini', code: 'SU' },
+  { key: 'hen', label: 'Avicoli', code: 'AV' },
+  { key: 'sheep', label: 'Ovini', code: 'OV' },
+];
+const codeOf = k => (SPECIES.find(s => s.key === k) || { code: '—' }).code;
+
+function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; }
+function fmt(n, d) {
+  const dd = d === undefined ? 0 : d;
+  return n.toLocaleString('it-IT', { minimumFractionDigits: dd, maximumFractionDigits: dd });
+}
+
+class Component extends DCLogic {
+  state = {
+    screen: 'home',
+    panel: 'calc',
+    id: 'r1',
+    filter: 'Tutte',
+    recipes: RECIPES.map(r => ({ id: r.id, name: r.name, sp: r.sp, species: r.species, base: r.base.map(b => ({ name: b[0], pct: String(b[1]).replace('.', ',') })), fixed: r.fixed.map(f => ({ name: f[0], qty: String(f[1]).replace('.', ',') })) })),
+    mode: 'total',
+    amountTotal: '2000',
+    amountLimit: '600',
+    limitIdx: 0,
+    unit: null,
+  };
+
+  cur() { return this.state.recipes.find(r => r.id === this.state.id) || this.state.recipes[0]; }
+
+  renderVals() {
+    const st = this.state, p = this.props;
+    const showCum = p.showCumulative !== false;
+    const showPct = p.showPercent !== false;
+    const roundTo = p.roundTo ? num(p.roundTo) : 1;
+    const unit = st.unit || (p.defaultUnit === 'q' ? 'q' : 'kg');
+    const div = unit === 'q' ? 100 : 1;
+    const dec = unit === 'q' ? 2 : 0;
+    const r = this.cur();
+
+    const speciesList = ['Tutte'].concat(st.recipes.map(x => x.species).filter(s => !!s).filter((s, i, a) => a.indexOf(s) === i));
+    const cards = st.recipes.filter(x => st.filter === 'Tutte' || x.species === st.filter).map(x => {
+      const tot = x.base.reduce((s, b) => s + num(b.pct), 0) || 100;
+      return {
+        name: x.name || 'Senza nome', species: x.species || 'Specie da definire',
+        count: x.base.length + '+' + x.fixed.length,
+        bars: x.base.map(b => ({ w: (num(b.pct) / tot * 100).toFixed(2) + '%' })),
+        code: codeOf(x.sp),
+        open: () => this.setState({ id: x.id, screen: 'op', panel: 'calc', limitIdx: 0 }),
+      };
+    });
+
+    const sum = r.base.reduce((s, b) => s + num(b.pct), 0);
+    const sumOk = Math.abs(sum - 100) < 0.05;
+    const lIdx = Math.min(st.limitIdx, r.base.length - 1);
+
+    let totalKg;
+    if (st.mode === 'total') {
+      totalKg = num(st.amountTotal) * div;
+    } else {
+      const pct = num(r.base[lIdx].pct);
+      totalKg = pct > 0 ? (num(st.amountLimit) * div) / (pct / 100) : 0;
+    }
+    const round = v => roundTo > 1 ? Math.round(v / roundTo) * roundTo : v;
+
+    let cum = 0;
+    const calcRows = [];
+    r.base.forEach((b, i) => {
+      const kg = round(totalKg * num(b.pct) / 100);
+      cum += kg;
+      const hot = st.mode === 'limit' && i === lIdx;
+      calcRows.push({
+        name: b.name, pct: fmt(num(b.pct), num(b.pct) % 1 ? 1 : 0),
+        qty: fmt(kg / div, dec), cum: fmt(cum / div, dec),
+        bg: hot ? '#161D18' : 'transparent', nameColor: hot ? ABRIGHT : '#E8EBE8',
+      });
+    });
+    r.fixed.forEach(f => {
+      const kg = totalKg / 1000 * num(f.qty);
+      cum += kg;
+      calcRows.push({
+        name: f.name, pct: '—',
+        qty: fmt(kg / div, kg < 10 && unit === 'kg' ? 1 : dec), cum: fmt(cum / div, dec),
+        bg: 'transparent', nameColor: '#A9B1A9',
+      });
+    });
+
+    const editBase = (i, val) => this.setState(s => ({ recipes: s.recipes.map(x => x.id !== r.id ? x : Object.assign({}, x, { base: x.base.map((bb, j) => j === i ? { name: bb.name, pct: val } : bb) })) }));
+    const editFixed = (i, val) => this.setState(s => ({ recipes: s.recipes.map(x => x.id !== r.id ? x : Object.assign({}, x, { fixed: x.fixed.map((ff, j) => j === i ? { name: ff.name, qty: val } : ff) })) }));
+
+    return {
+      isHome: st.screen === 'home', isOp: st.screen === 'op',
+      goHome: () => this.setState({ screen: 'home' }),
+      onNew: () => this.setState(s => {
+        const id = 'n' + Date.now();
+        const blank = {
+          id, name: '', sp: '', species: '',
+          base: [1,2,3,4,5,6].map(() => ({ name: 'Ingrediente', pct: '' })),
+          fixed: [{ name: 'Nucleo / additivo', qty: '' }],
+        };
+        return { recipes: s.recipes.concat([blank]), id, screen: 'op', panel: 'comp', mode: 'total', limitIdx: 0, filter: 'Tutte' };
+      }),
+      nameField: r.name,
+      onName: (e) => this.setState(s => ({ recipes: s.recipes.map(x => x.id !== r.id ? x : Object.assign({}, x, { name: e.target.value })) })),
+      speciesChoices: SPECIES.map(sp => ({
+        label: sp.label, pick: () => this.setState(s => ({ recipes: s.recipes.map(x => x.id !== r.id ? x : Object.assign({}, x, { sp: sp.key, species: sp.label })) })),
+        border: r.sp === sp.key ? A : '#2C312C', bg: r.sp === sp.key ? A : 'transparent', color: r.sp === sp.key ? '#0E100E' : '#A9B1A9',
+      })),
+      filters: speciesList.map(s => ({
+        label: s, pick: () => this.setState({ filter: s }),
+        border: st.filter === s ? A : '#2C312C', bg: st.filter === s ? A : 'transparent',
+        color: st.filter === s ? '#0E100E' : '#A9B1A9',
+      })),
+      cards,
+
+      recipeName: r.name || 'Nuova ricetta', species: r.species || 'Specie da definire',
+      panelCalc: st.panel === 'calc', panelComp: st.panel === 'comp',
+      showCalc: () => this.setState({ panel: 'calc' }), showComp: () => this.setState({ panel: 'comp' }),
+      tabCalcBg: st.panel === 'calc' ? A : 'transparent', tabCalcColor: st.panel === 'calc' ? '#0E100E' : '#A9B1A9',
+      tabCompBg: st.panel === 'comp' ? A : 'transparent', tabCompColor: st.panel === 'comp' ? '#0E100E' : '#A9B1A9',
+
+      isLimitMode: st.mode === 'limit',
+      setModeTotal: () => this.setState({ mode: 'total' }),
+      setModeLimit: () => this.setState({ mode: 'limit' }),
+      mTotalBg: st.mode === 'total' ? A : 'transparent', mTotalColor: st.mode === 'total' ? '#0E100E' : '#A9B1A9',
+      mLimitBg: st.mode === 'limit' ? A : 'transparent', mLimitColor: st.mode === 'limit' ? '#0E100E' : '#A9B1A9',
+      limitChoices: r.base.map((b, i) => ({
+        name: b.name, pick: () => this.setState({ limitIdx: i }),
+        border: i === lIdx ? A : '#2C312C', bg: i === lIdx ? A : 'transparent', color: i === lIdx ? '#0E100E' : '#A9B1A9',
+      })),
+      amount: st.mode === 'total' ? st.amountTotal : st.amountLimit,
+      onAmount: (e) => this.setState(st.mode === 'total' ? { amountTotal: e.target.value } : { amountLimit: e.target.value }),
+      unitLabel: unit, showCum, showPct,
+      setKg: () => this.setState({ unit: 'kg' }), setQ: () => this.setState({ unit: 'q' }),
+      kgBg: unit === 'kg' ? A : 'transparent', kgColor: unit === 'kg' ? '#0E100E' : '#A9B1A9', kgBorder: unit === 'kg' ? A : '#2C312C',
+      qBg: unit === 'q' ? A : 'transparent', qColor: unit === 'q' ? '#0E100E' : '#A9B1A9', qBorder: unit === 'q' ? A : '#2C312C',
+
+      calcRows, grandTotal: fmt(cum / div, dec),
+      batchNote: (st.mode === 'total' ? 'Base ' + fmt(totalKg) + ' kg + aggiunte' : 'Miscela risultante ' + fmt(totalKg) + ' kg')
+        + (roundTo > 1 ? ' · arrot. ' + fmt(roundTo) + ' kg' : '')
+        + (sumOk ? '' : ' · Σ ' + fmt(sum, 1) + '% ⚠'),
+
+      rows: r.base.map((b, i) => ({ name: b.name, pct: b.pct, onPct: (e) => editBase(i, e.target.value) })),
+      fixedRows: r.fixed.map((f, i) => ({ name: f.name, qty: f.qty, onQty: (e) => editFixed(i, e.target.value) })),
+      sumPct: fmt(sum, sum % 1 ? 1 : 0), sumColor: sumOk ? ABRIGHT : '#D98040',
+    };
+  }
+}
+
+</script>
+</body>
+</html>
