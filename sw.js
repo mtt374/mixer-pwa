@@ -1,4 +1,4 @@
-const CACHE_NAME = 'miscele-pwa-v13';
+const CACHE_NAME = 'miscele-pwa-v14';
 const ASSETS = [
   './',
   './index.html',

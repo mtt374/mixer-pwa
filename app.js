@@ -156,7 +156,7 @@ function startRecipesSync() {
   }).catch(() => {}).finally(() => {
     recipesCol.onSnapshot(snap => {
       const recipes = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
-      setState({ recipes, loading: false });
+      withFocusPreserved(() => setState({ recipes, loading: false }));
     }, () => showToast('Errore di connessione al database'));
   });
 }
