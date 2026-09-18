@@ -142,10 +142,15 @@ function replaceAllRecipesInDb(newRecipes) {
   }).catch(() => showToast('Sincronizzazione non riuscita'));
 }
 function startRecipesSync() {
-  recipesCol.get().then(snap => {
-    if (snap.empty) {
+  // Seed the built-in defaults only on the very first run ever (tracked by
+  // this marker doc), never again — so intentionally deleting everything
+  // later leaves the database genuinely empty instead of being refilled.
+  const seedFlag = db.collection('meta').doc('seeded');
+  seedFlag.get().then(doc => {
+    if (!doc.exists) {
       const batch = db.batch();
       defaultRecipes().forEach(r => batch.set(recipesCol.doc(r.id), recipeData(r)));
+      batch.set(seedFlag, { done: true });
       return batch.commit();
     }
   }).catch(() => {}).finally(() => {
