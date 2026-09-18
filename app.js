@@ -209,9 +209,18 @@ function curRazioni() {
 function curProd() {
   return state.recipes.find(r => r.id === state.prodId) || state.recipes[0];
 }
+let saveDebounceTimer = null;
 function updateRazioni(fn) {
   setState(s => ({ recipes: s.recipes.map(x => x.id !== s.razioniId ? x : fn(x)) }));
-  saveRecipeToDb(curRazioni());
+  // Debounced: typing fires this on every keystroke, but each write round-trips
+  // through Firestore's onSnapshot and triggers a re-render — batch rapid edits
+  // into one write after a short pause instead of one per character.
+  const id = state.razioniId;
+  clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = setTimeout(() => {
+    const r = state.recipes.find(x => x.id === id);
+    if (r) saveRecipeToDb(r);
+  }, 500);
 }
 
 /* ---------- import/export (backup files) ---------- */
