@@ -98,8 +98,17 @@ button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
 
 /* ---- Gallery list top (Razioni / Produzione) ---- */
 .list-top {
-  padding: 40px 18px 14px;
+  padding: 40px 18px 8px;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px;
+}
+
+.list-heading { padding: 4px 18px 14px; }
+.list-heading .eyebrow {
+  font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.list-heading .title-main {
+  font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-top: 2px;
 }
 
 .tab-pills {
@@ -120,7 +129,8 @@ button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
    action buttons) always fits on a single row without wrapping. */
 @media (max-width: 480px) {
   .tab-pill span { display: none; }
-  .tab-pill { padding: 9px 12px; }
+  .tab-pill { padding: 11px 14px; }
+  .tab-pill svg { width: 19px; height: 19px; }
 }
 
 .header-actions { display: flex; align-items: center; gap: 8px; flex: none; }

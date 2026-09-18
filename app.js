@@ -436,6 +436,10 @@ function renderRazioniList() {
         <button class="btn-square-add" data-action="new-recipe" title="Nuova ricetta" aria-label="Nuova ricetta">+</button>
       </div>
     </div>
+    <div class="list-heading">
+      <div class="eyebrow">Archivio</div>
+      <div class="title-main">Razioni</div>
+    </div>
     ${renderFilters(g)}
     <div class="cards-wrap"><div class="cards-grid">${renderCards(g, 'open-razioni')}</div></div>
   </div>`;
@@ -529,6 +533,10 @@ function renderProdList() {
   <div class="screen">
     <div class="list-top">
       ${renderTabPills()}
+    </div>
+    <div class="list-heading">
+      <div class="eyebrow">Seleziona una razione</div>
+      <div class="title-main">Produzione</div>
     </div>
     ${renderFilters(g)}
     <div class="cards-wrap"><div class="cards-grid">${renderCards(g, 'open-produzione')}</div></div>
