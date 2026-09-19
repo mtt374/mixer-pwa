@@ -64,6 +64,11 @@ function editIcon(size) {
   return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none" aria-hidden="true"><path d="M4 20l4.6-1 10-10a2.12 2.12 0 0 0-3-3l-10 10L4 20Z"/><path d="M12.5 6.5l3 3"/></svg>`;
 }
 
+function checkIcon(size) {
+  const s = size || 16;
+  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none" aria-hidden="true"><path d="M4 12.5l5 5L20 7"/></svg>`;
+}
+
 function warnTriangle(size) {
   const s = size || 12;
   return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px" aria-hidden="true"><path d="M10.5 3.9 2 19h20L13.5 3.9a2 2 0 0 0-3 0Z"/><path d="M12 9.5v4.2"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>`;
@@ -185,6 +190,9 @@ let state = {
 
   razioniId: null,      // set => showing the read-only view (or editor) for this recipe
   razioniMode: 'view',  // 'view' | 'edit'
+  draft: null,          // working copy being edited; only written to Firestore on explicit save
+  draftDirty: false,
+  showExitPrompt: false,
   confirmingDelete: false,
 
   prodId: null,          // set => showing an active production/weighing session for this recipe
@@ -209,18 +217,10 @@ function curRazioni() {
 function curProd() {
   return state.recipes.find(r => r.id === state.prodId) || state.recipes[0];
 }
-let saveDebounceTimer = null;
-function updateRazioni(fn) {
-  setState(s => ({ recipes: s.recipes.map(x => x.id !== s.razioniId ? x : fn(x)) }));
-  // Debounced: typing fires this on every keystroke, but each write round-trips
-  // through Firestore's onSnapshot and triggers a re-render — batch rapid edits
-  // into one write after a short pause instead of one per character.
-  const id = state.razioniId;
-  clearTimeout(saveDebounceTimer);
-  saveDebounceTimer = setTimeout(() => {
-    const r = state.recipes.find(x => x.id === id);
-    if (r) saveRecipeToDb(r);
-  }, 500);
+function updateDraft(fn) {
+  // Edits only ever touch the local draft — nothing reaches Firestore (or
+  // triggers its real-time echo/re-render) until "Salva modifiche" is tapped.
+  setState(s => ({ draft: fn(s.draft), draftDirty: true }));
 }
 
 /* ---------- import/export (backup files) ---------- */
@@ -263,7 +263,7 @@ function importData() {
         const data = JSON.parse(String(reader.result));
         const arr = Array.isArray(data) ? data : (data && Array.isArray(data.recipes) ? data.recipes : null);
         if (!arr || !arr.length || !arr.every(isValidRecipeShape)) throw new Error('bad shape');
-        setState({ recipes: arr, razioniId: null, razioniMode: 'view', prodId: null, filter: 'Tutte' });
+        setState({ recipes: arr, razioniId: null, razioniMode: 'view', draft: null, draftDirty: false, showExitPrompt: false, prodId: null, filter: 'Tutte' });
         replaceAllRecipesInDb(arr);
         showToast('File importato ✓');
       } catch (e) {
@@ -379,7 +379,23 @@ function render() {
   } else {
     screenHtml = state.prodId ? renderProdSession() : renderProdList();
   }
-  app.innerHTML = `<div class="app-frame"><div class="screen-area">${screenHtml}</div></div>`;
+  const modalHtml = state.showExitPrompt ? renderExitPromptModal() : '';
+  app.innerHTML = `<div class="app-frame"><div class="screen-area">${screenHtml}</div></div>${modalHtml}`;
+}
+
+function renderExitPromptModal() {
+  return `
+  <div class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-title">Modifiche non salvate</div>
+      <div class="modal-body">Vuoi salvare le modifiche a questa ricetta prima di uscire?</div>
+      <div class="modal-actions">
+        <button class="modal-btn primary" data-action="save-razioni">${checkIcon(14)}<span>Salva modifiche</span></button>
+        <button class="modal-btn discard" data-action="exit-discard">Scarta modifiche</button>
+        <button class="modal-btn secondary" data-action="exit-cancel">Annulla</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderTabPills() {
@@ -480,8 +496,9 @@ function renderRazioniView() {
 }
 
 function renderRazioniEdit() {
-  const r = curRazioni();
+  const r = state.draft;
   const c = computeComposition(r);
+  const existsInDb = state.recipes.some(x => x.id === state.razioniId);
 
   return `
   <div class="screen">
@@ -491,6 +508,7 @@ function renderRazioniEdit() {
         <div class="op-species">${speciesIcon(r.sp, 12)}<span>${escapeHtml(r.species || 'Specie da definire')}</span></div>
         <div class="op-name">${escapeHtml(r.name || 'Nuova ricetta')}</div>
       </div>
+      <button class="edit-btn" data-action="save-razioni" title="Salva modifiche" aria-label="Salva modifiche">${checkIcon(15)}<span>Salva</span></button>
     </div>
     <div class="panel">
       <div class="comp-top">
@@ -522,7 +540,7 @@ function renderRazioniEdit() {
         </div>`).join('')}
       <button class="add-row-btn" data-action="add-fixed">+ Aggiungi aggiunta fissa</button>
 
-      <button class="delete-recipe-btn ${state.confirmingDelete ? 'confirm' : ''}" data-action="delete-recipe">${state.confirmingDelete ? '⚠ Tocca di nuovo per confermare' : '🗑 Elimina ricetta'}</button>
+      ${existsInDb ? `<button class="delete-recipe-btn ${state.confirmingDelete ? 'confirm' : ''}" data-action="delete-recipe">${state.confirmingDelete ? '⚠ Tocca di nuovo per confermare' : '🗑 Elimina ricetta'}</button>` : ''}
     </div>
   </div>`;
 }
@@ -666,14 +684,45 @@ app.addEventListener('click', (e) => {
         base: [1,2,3].map(() => ({ name: '', pct: '' })),
         fixed: [{ name: '', qty: '' }],
       };
-      setState(s => ({ recipes: s.recipes.concat([blank]), razioniId: nid, razioniMode: 'edit', filter: 'Tutte' }));
-      saveRecipeToDb(blank);
+      setState({ razioniId: nid, razioniMode: 'edit', draft: blank, draftDirty: false, filter: 'Tutte' });
       break;
     }
-    case 'open-razioni': setState({ razioniId: id, razioniMode: 'view', confirmingDelete: false }); break;
-    case 'edit-razioni': setState({ razioniMode: 'edit' }); break;
-    case 'razioni-to-view': setState({ razioniMode: 'view', confirmingDelete: false }); break;
+    case 'open-razioni': setState({ razioniId: id, razioniMode: 'view', draft: null, draftDirty: false, showExitPrompt: false, confirmingDelete: false }); break;
+    case 'edit-razioni': {
+      const r = curRazioni();
+      setState({ razioniMode: 'edit', draft: JSON.parse(JSON.stringify(r)), draftDirty: false });
+      break;
+    }
+    case 'razioni-to-view': {
+      if (state.draftDirty) { setState({ showExitPrompt: true }); break; }
+      const existsInDb = state.recipes.some(x => x.id === state.razioniId);
+      setState({
+        razioniId: existsInDb ? state.razioniId : null,
+        razioniMode: 'view', draft: null, draftDirty: false, confirmingDelete: false,
+      });
+      break;
+    }
     case 'razioni-to-list': setState({ razioniId: null, confirmingDelete: false }); break;
+    case 'save-razioni': {
+      const d = state.draft;
+      if (!d) { setState({ showExitPrompt: false }); break; }
+      setState(s => ({
+        recipes: s.recipes.some(x => x.id === d.id) ? s.recipes.map(x => x.id === d.id ? d : x) : s.recipes.concat([d]),
+        razioniId: d.id, razioniMode: 'view', draft: null, draftDirty: false, showExitPrompt: false,
+      }));
+      saveRecipeToDb(d);
+      showToast('Modifiche salvate ✓');
+      break;
+    }
+    case 'exit-discard': {
+      const existsInDb = state.recipes.some(x => x.id === state.razioniId);
+      setState({
+        razioniId: existsInDb ? state.razioniId : null,
+        razioniMode: 'view', draft: null, draftDirty: false, showExitPrompt: false,
+      });
+      break;
+    }
+    case 'exit-cancel': setState({ showExitPrompt: false }); break;
     case 'export-data': exportData(); break;
     case 'import-data': importData(); break;
 
@@ -691,30 +740,25 @@ app.addEventListener('click', (e) => {
 
     case 'pick-species': {
       const sp = SPECIES.find(s => s.key === value);
-      updateRazioni(x => Object.assign({}, x, { sp: sp.key, species: sp.label }));
+      updateDraft(x => Object.assign({}, x, { sp: sp.key, species: sp.label }));
       break;
     }
     case 'add-base': {
-      updateRazioni(x => Object.assign({}, x, { base: x.base.concat([{ name: '', pct: '' }]) }));
+      updateDraft(x => Object.assign({}, x, { base: x.base.concat([{ name: '', pct: '' }]) }));
       break;
     }
     case 'remove-base': {
-      const r0 = state.recipes.find(x => x.id === state.razioniId);
-      if (!r0 || r0.base.length <= 1) break;
-      setState(s => {
-        const newBase = r0.base.filter((_, i) => i !== idx);
-        const recipes = s.recipes.map(x => x.id !== r0.id ? x : Object.assign({}, x, { base: newBase }));
-        return { recipes, limitIdx: Math.max(0, Math.min(s.limitIdx, newBase.length - 1)) };
-      });
-      saveRecipeToDb(curRazioni());
+      const d = state.draft;
+      if (!d || d.base.length <= 1) break;
+      updateDraft(x => Object.assign({}, x, { base: x.base.filter((_, i) => i !== idx) }));
       break;
     }
     case 'add-fixed': {
-      updateRazioni(x => Object.assign({}, x, { fixed: x.fixed.concat([{ name: '', qty: '' }]) }));
+      updateDraft(x => Object.assign({}, x, { fixed: x.fixed.concat([{ name: '', qty: '' }]) }));
       break;
     }
     case 'remove-fixed': {
-      updateRazioni(x => Object.assign({}, x, { fixed: x.fixed.filter((_, i) => i !== idx) }));
+      updateDraft(x => Object.assign({}, x, { fixed: x.fixed.filter((_, i) => i !== idx) }));
       break;
     }
     case 'delete-recipe': {
@@ -725,15 +769,16 @@ app.addEventListener('click', (e) => {
         break;
       }
       clearTimeout(deleteConfirmTimer);
-      const r = curRazioni();
+      const rid = state.razioniId;
       setState(s => {
-        const recipes = s.recipes.filter(x => x.id !== r.id);
+        const recipes = s.recipes.filter(x => x.id !== rid);
         return {
           recipes, razioniId: null, razioniMode: 'view', confirmingDelete: false,
-          prodId: s.prodId === r.id ? null : s.prodId,
+          draft: null, draftDirty: false, showExitPrompt: false,
+          prodId: s.prodId === rid ? null : s.prodId,
         };
       });
-      deleteRecipeFromDb(r.id);
+      deleteRecipeFromDb(rid);
       showToast('Ricetta eliminata');
       break;
     }
@@ -753,19 +798,19 @@ app.addEventListener('input', (e) => {
         setState(state.mode === 'total' ? { amountTotal: val } : { amountLimit: val });
         break;
       case 'name':
-        updateRazioni(x => Object.assign({}, x, { name: val }));
+        updateDraft(x => Object.assign({}, x, { name: val }));
         break;
       case 'base-name':
-        updateRazioni(x => Object.assign({}, x, { base: x.base.map((b, i) => i === idx ? { name: val, pct: b.pct } : b) }));
+        updateDraft(x => Object.assign({}, x, { base: x.base.map((b, i) => i === idx ? { name: val, pct: b.pct } : b) }));
         break;
       case 'base-pct':
-        updateRazioni(x => Object.assign({}, x, { base: x.base.map((b, i) => i === idx ? { name: b.name, pct: val } : b) }));
+        updateDraft(x => Object.assign({}, x, { base: x.base.map((b, i) => i === idx ? { name: b.name, pct: val } : b) }));
         break;
       case 'fixed-name':
-        updateRazioni(x => Object.assign({}, x, { fixed: x.fixed.map((f, i) => i === idx ? { name: val, qty: f.qty } : f) }));
+        updateDraft(x => Object.assign({}, x, { fixed: x.fixed.map((f, i) => i === idx ? { name: val, qty: f.qty } : f) }));
         break;
       case 'fixed-qty':
-        updateRazioni(x => Object.assign({}, x, { fixed: x.fixed.map((f, i) => i === idx ? { name: f.name, qty: val } : f) }));
+        updateDraft(x => Object.assign({}, x, { fixed: x.fixed.map((f, i) => i === idx ? { name: f.name, qty: val } : f) }));
         break;
     }
   });
