@@ -366,9 +366,20 @@ function computeSession(r) {
 
 const app = document.getElementById('app');
 
+// Morphing (instead of a blind app.innerHTML = ...) only touches the DOM
+// nodes that actually changed between renders. With a full replace, every
+// icon — even ones whose markup is byte-identical — was torn down and
+// recreated as a new node on every keystroke, forcing the browser to
+// redecode/repaint the masked PNGs and causing a visible flicker.
+function morphRoot(html) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+  morphdom(app, wrapper, { childrenOnly: true });
+}
+
 function render() {
   if (state.loading) {
-    app.innerHTML = `<div class="app-frame"><div class="screen-area"><div class="loading-screen">Caricamento…</div></div></div>`;
+    morphRoot(`<div class="app-frame"><div class="screen-area"><div class="loading-screen">Caricamento…</div></div></div>`);
     return;
   }
   let screenHtml;
@@ -380,7 +391,7 @@ function render() {
     screenHtml = state.prodId ? renderProdSession() : renderProdList();
   }
   const modalHtml = state.showExitPrompt ? renderExitPromptModal() : '';
-  app.innerHTML = `<div class="app-frame"><div class="screen-area">${screenHtml}</div></div>${modalHtml}`;
+  morphRoot(`<div class="app-frame"><div class="screen-area">${screenHtml}</div></div>${modalHtml}`);
 }
 
 function renderExitPromptModal() {
