@@ -193,7 +193,7 @@ let state = {
   draft: null,          // working copy being edited; only written to Firestore on explicit save
   draftDirty: false,
   showExitPrompt: false,
-  confirmingDelete: false,
+  showDeletePrompt: false,
 
   prodId: null,          // set => showing an active production/weighing session for this recipe
   mode: 'total',
@@ -202,8 +202,6 @@ let state = {
   limitIdx: 0,
   unit: null,
 };
-
-let deleteConfirmTimer = null;
 
 function setState(patch) {
   const p = typeof patch === 'function' ? patch(state) : patch;
@@ -390,7 +388,8 @@ function render() {
   } else {
     screenHtml = state.prodId ? renderProdSession() : renderProdList();
   }
-  const modalHtml = state.showExitPrompt ? renderExitPromptModal() : '';
+  const modalHtml = state.showExitPrompt ? renderExitPromptModal()
+    : state.showDeletePrompt ? renderDeletePromptModal() : '';
   morphRoot(`<div class="app-frame"><div class="screen-area">${screenHtml}</div></div>${modalHtml}`);
 }
 
@@ -404,6 +403,20 @@ function renderExitPromptModal() {
         <button class="modal-btn primary" data-action="save-razioni">${checkIcon(14)}<span>Salva modifiche</span></button>
         <button class="modal-btn discard" data-action="exit-discard">Scarta modifiche</button>
         <button class="modal-btn secondary" data-action="exit-cancel">Annulla</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderDeletePromptModal() {
+  return `
+  <div class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-title">Eliminare la ricetta?</div>
+      <div class="modal-body">Questa azione non può essere annullata.</div>
+      <div class="modal-actions">
+        <button class="modal-btn discard" data-action="confirm-delete">🗑 Elimina ricetta</button>
+        <button class="modal-btn secondary" data-action="cancel-delete">Annulla</button>
       </div>
     </div>
   </div>`;
@@ -551,7 +564,7 @@ function renderRazioniEdit() {
         </div>`).join('')}
       <button class="add-row-btn" data-action="add-fixed">+ Aggiungi aggiunta fissa</button>
 
-      ${existsInDb ? `<button class="delete-recipe-btn ${state.confirmingDelete ? 'confirm' : ''}" data-action="delete-recipe">${state.confirmingDelete ? '⚠ Tocca di nuovo per confermare' : '🗑 Elimina ricetta'}</button>` : ''}
+      ${existsInDb ? `<button class="delete-recipe-btn" data-action="delete-recipe">🗑 Elimina ricetta</button>` : ''}
     </div>
   </div>`;
 }
@@ -679,7 +692,7 @@ app.addEventListener('click', (e) => {
   const value = btn.dataset.value;
 
   switch (action) {
-    case 'switch-tab': setState({ tab: value, confirmingDelete: false }); break;
+    case 'switch-tab': setState({ tab: value, showDeletePrompt: false }); break;
     case 'toggle-theme': {
       const next = state.theme === 'dark' ? 'light' : 'dark';
       applyTheme(next);
@@ -698,7 +711,7 @@ app.addEventListener('click', (e) => {
       setState({ razioniId: nid, razioniMode: 'edit', draft: blank, draftDirty: false, filter: 'Tutte' });
       break;
     }
-    case 'open-razioni': setState({ razioniId: id, razioniMode: 'view', draft: null, draftDirty: false, showExitPrompt: false, confirmingDelete: false }); break;
+    case 'open-razioni': setState({ razioniId: id, razioniMode: 'view', draft: null, draftDirty: false, showExitPrompt: false, showDeletePrompt: false }); break;
     case 'edit-razioni': {
       const r = curRazioni();
       setState({ razioniMode: 'edit', draft: JSON.parse(JSON.stringify(r)), draftDirty: false });
@@ -709,11 +722,11 @@ app.addEventListener('click', (e) => {
       const existsInDb = state.recipes.some(x => x.id === state.razioniId);
       setState({
         razioniId: existsInDb ? state.razioniId : null,
-        razioniMode: 'view', draft: null, draftDirty: false, confirmingDelete: false,
+        razioniMode: 'view', draft: null, draftDirty: false, showDeletePrompt: false,
       });
       break;
     }
-    case 'razioni-to-list': setState({ razioniId: null, confirmingDelete: false }); break;
+    case 'razioni-to-list': setState({ razioniId: null, showDeletePrompt: false }); break;
     case 'save-razioni': {
       const d = state.draft;
       if (!d) { setState({ showExitPrompt: false }); break; }
@@ -772,19 +785,14 @@ app.addEventListener('click', (e) => {
       updateDraft(x => Object.assign({}, x, { fixed: x.fixed.filter((_, i) => i !== idx) }));
       break;
     }
-    case 'delete-recipe': {
-      if (!state.confirmingDelete) {
-        clearTimeout(deleteConfirmTimer);
-        setState({ confirmingDelete: true });
-        deleteConfirmTimer = setTimeout(() => setState({ confirmingDelete: false }), 3500);
-        break;
-      }
-      clearTimeout(deleteConfirmTimer);
+    case 'delete-recipe': setState({ showDeletePrompt: true }); break;
+    case 'cancel-delete': setState({ showDeletePrompt: false }); break;
+    case 'confirm-delete': {
       const rid = state.razioniId;
       setState(s => {
         const recipes = s.recipes.filter(x => x.id !== rid);
         return {
-          recipes, razioniId: null, razioniMode: 'view', confirmingDelete: false,
+          recipes, razioniId: null, razioniMode: 'view', showDeletePrompt: false,
           draft: null, draftDirty: false, showExitPrompt: false,
           prodId: s.prodId === rid ? null : s.prodId,
         };

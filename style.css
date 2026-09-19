@@ -405,8 +405,6 @@ button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
   font-size: 12px; font-weight: 600; padding: 9px 14px; border-radius: 999px; cursor: pointer;
 }
 .delete-recipe-btn:hover { border-color: var(--warn); background: rgba(217,128,64,.1); }
-.delete-recipe-btn.confirm { background: var(--warn); border-color: var(--warn); color: #1a1006; }
-.delete-recipe-btn.confirm:hover { background: var(--warn); color: #1a1006; }
 
 .footer {
   border-top: 1px solid var(--border); background: var(--panel3); padding: 11px 18px;
