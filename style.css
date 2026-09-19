@@ -375,13 +375,13 @@ button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
 .comp-row { display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-bottom: 1px solid var(--line2); }
 .comp-name-input {
   flex: 1; min-width: 0; background: transparent; border: 1px solid transparent; border-radius: 8px;
-  padding: 6px 7px; margin: -6px -7px; color: var(--fg); font-size: 14px; outline: none;
+  padding: 6px 7px; margin: -6px -7px; color: var(--fg); font-size: 16px; outline: none;
 }
 .comp-name-input:hover { border-color: var(--line); }
 .comp-name-input:focus { border-color: var(--accent); background: var(--panel); }
 .comp-input {
-  width: 64px; text-align: right; background: var(--panel); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 9px; color: var(--fg); font-family: 'DM Mono', monospace; font-size: 14px; outline: none;
+  width: 68px; text-align: right; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 9px; color: var(--fg); font-family: 'DM Mono', monospace; font-size: 16px; outline: none;
   font-variant-numeric: tabular-nums;
 }
 .comp-input:focus { border-color: var(--accent); }
